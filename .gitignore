@@ -1,0 +1,49 @@
+# Python bytecode files
+*.py[cod]
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# Compiled translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# Used by eclipse
+.settings/
+
+# Used by PyCharm
+.idea/
+
+# Used by Vim
+*.swp
+.ropeproject/
+
+# Backup files
+*~
+
+# Used by the project
+/*.sqlite3
