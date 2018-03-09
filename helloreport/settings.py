@@ -127,10 +127,11 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 
-# Import production settings if exists
-# https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
+# Import extra settings coming from environment vars
+# If env var DJANGO_PRODUCTION=true then a special check is done
+# See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
-def load_production_settings(settings):
+def load_extra_settings(settings):
     from envparse import Env
 
     env = Env(
@@ -142,7 +143,15 @@ def load_production_settings(settings):
         settings['DEBUG'] = False
         settings['SECRET_KEY'] = env('DJANGO_SECRET_KEY')
         settings['DATABASES'].update(env('DJANGO_DATABASES'))
+    else:
+        special_cases = ('DATABASES',)
+
+        for k, v in settings.items():
+            if k.isupper() and k not in special_cases:
+                settings[k] = env('DJANGO_' + k, cast=type(v), default=v)
+
+        settings['DATABASES'].update(env('DJANGO_DATABASES', default=()))
 
 
-load_production_settings(locals())
-del load_production_settings
+load_extra_settings(locals())
+del load_extra_settings
