@@ -34,3 +34,16 @@ class Invoice(models.Model):
 
     def __str__(self):
         return "%06d - %s" % (self.number, self.customer)
+
+
+class Tax(models.Model):
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, verbose_name=_('invoice'), related_name='taxes')
+    ticket = models.PositiveIntegerField(_('tax paid by ticket'))
+    amount = models.FloatField(_('amount'))
+
+    class Meta:
+        verbose_name = _('tax')
+        unique_together = ("invoice", "ticket")
+
+    def __str__(self):
+        return "%06d - %0.2f" % (self.ticket, self.amount)
