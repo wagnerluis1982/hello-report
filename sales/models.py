@@ -1,3 +1,4 @@
+from django.core.validators import validate_comma_separated_integer_list
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -26,6 +27,8 @@ class Invoice(models.Model):
     customer = models.CharField(_('customer'), max_length=60, null=True, blank=True)
     nature = models.CharField(_('nature'), max_length=1, choices=NATURE_CHOICES)
     total = models.FloatField(_('total'), null=True, blank=True)
+    tax = models.FloatField(_('tax'), null=True, blank=True)
+    tickets = models.CharField(_('tickets'), max_length=100, validators=[validate_comma_separated_integer_list], null=True, blank=True)
     comment = models.CharField(_('comment'), max_length=100, null=True, blank=True)
 
     class Meta:
@@ -34,16 +37,3 @@ class Invoice(models.Model):
 
     def __str__(self):
         return "%06d - %s" % (self.number, self.customer or '[%s]' % self.get_nature_display().upper())
-
-
-class Tax(models.Model):
-    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, verbose_name=_('invoice'), related_name='taxes')
-    ticket = models.PositiveIntegerField(_('tax paid by ticket'))
-    amount = models.FloatField(_('amount'))
-
-    class Meta:
-        verbose_name = _('tax')
-        unique_together = ("invoice", "ticket")
-
-    def __str__(self):
-        return "%06d - %0.2f" % (self.ticket, self.amount)
