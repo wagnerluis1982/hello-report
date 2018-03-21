@@ -55,7 +55,12 @@ def parse_invoice_xml(file) -> ParsedInvoice:
 
 
 CODE_NATURE = {
-    5.411: Invoice.SALE,
+    1.411: Invoice.SALE_RETURN,
+    5.929: Invoice.SALE,
+    6.202: Invoice.PURCHASE_RETURN,
+    6.411: Invoice.PURCHASE_RETURN,
+    6.915: Invoice.RMA,
+    6.949: Invoice.RMA,
 }
 
 
@@ -107,9 +112,12 @@ def import_invoices(year: int, month: int):
 
                     # If invoice is a sale, we need an extra database query to get the tickets.
                     # This is needed to avoid an expensive and not very correct search in XML comments.
-                    sql = "SELECT DISTINCT NUMERO_IMP FROM ITEVENDAS WHERE DOC = 'NF' AND NUMERO = '%s'"
-                    t_cursor.execute(sql % txt_number)
-                    v.tickets = ','.join([e for (e,) in t_cursor.fetchall()])
+                    if v.nature == Invoice.SALE:
+                        sql = "SELECT DISTINCT NUMERO_IMP FROM ITEVENDAS WHERE DOC = 'NF' AND NUMERO = '%s'"
+                        t_cursor.execute(sql % txt_number)
+                        tickets_list = t_cursor.fetchall()
+                        if any(tickets_list):
+                            v.tickets = ','.join([e for (e,) in tickets_list if e])
 
                 # And the invoice is saved \o/
                 v.full_clean()
