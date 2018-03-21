@@ -82,8 +82,9 @@ db_from_url = partial(dj_database_url.parse, conn_max_age=600)
 
 DATABASES = {
     'default': db_from_url('sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3')),
-    'integration': db_from_url('sqlite:///' + os.path.join(BASE_DIR, 'db-i.sqlite3')),
 }
+
+INTEGRATION_DATABASE = 'sqlite:///' + os.path.join(BASE_DIR, 'db-i.sqlite3')
 
 
 # Password validation

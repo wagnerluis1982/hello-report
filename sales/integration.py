@@ -4,7 +4,9 @@ import io
 from dataclasses import dataclass
 from xml.etree import ElementTree
 
-from django.db import connections, transaction
+from django.conf import settings
+from django.db import transaction
+from sqlalchemy import create_engine
 
 from sales.models import Invoice
 
@@ -64,28 +66,26 @@ CODE_NATURE = {
 }
 
 
-def import_invoices(year: int, month: int):
+def import_invoices(year: int, month: int, engine=create_engine(settings.INTEGRATION_DATABASE)):
     """Import from the sales system the invoices issued at a specified period
     """
     begin_date = datetime.date(year, month, 1)
     end_date = datetime.date(year, month, calendar.monthlen(year, month))
 
-    conn = connections['integration']
-
-    with conn.cursor() as v_cursor, conn.cursor() as t_cursor:
+    with engine.connect() as conn:
         sql = '''
             SELECT
               NUMERO, DATA_EMISSAO, XML, RECIBO_CODSTATUS, CANCELA_CODSTATUS
             FROM
               VENDAS_NFE
-            WHERE DOC = 'NF' AND DATA_EMISSAO BETWEEN %s AND %s
+            WHERE DOC = 'NF' AND DATA_EMISSAO BETWEEN ? AND ?
             ORDER BY NUMERO
         '''
 
-        v_cursor.execute(sql, [begin_date, end_date])
+        v_result = conn.execute(sql, [begin_date, end_date])
 
         with transaction.atomic():
-            for txt_number, date, xml, status, cancel_status in v_cursor:
+            for txt_number, date, xml, status, cancel_status in v_result:
                 # Ensure number as integer
                 number = int(txt_number)
 
@@ -114,8 +114,8 @@ def import_invoices(year: int, month: int):
                     # This is needed to avoid an expensive and not very correct search in XML comments.
                     if v.nature == Invoice.SALE:
                         sql = "SELECT DISTINCT NUMERO_IMP FROM ITEVENDAS WHERE DOC = 'NF' AND NUMERO = '%s'"
-                        t_cursor.execute(sql % txt_number)
-                        tickets_list = t_cursor.fetchall()
+                        t_result = conn.execute(sql % txt_number)
+                        tickets_list = t_result.fetchall()
                         if any(tickets_list):
                             v.tickets = ','.join([e for (e,) in tickets_list if e])
 
