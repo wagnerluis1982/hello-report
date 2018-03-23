@@ -2,7 +2,7 @@ import calendar
 import datetime
 import io
 from dataclasses import dataclass
-from xml.etree import ElementTree
+from html.parser import HTMLParser
 
 from django.conf import settings
 from django.db import transaction
@@ -21,39 +21,90 @@ class ParsedInvoice:
     tax: float
 
 
-def parse_invoice_xml(file) -> ParsedInvoice:
+class InvoiceParser(HTMLParser):
     """Read the necessary fields of a Brazilian invoice XML
     """
-    NS = {'p': 'http://www.portalfiscal.inf.br/nfe'}
+    def reset(self):
+        super().reset()
+        self.result = {}
+        self.track = {k: False for k in ('infnfe', 'ide', 'dest', 'det', 'prod', 'total', 'icmstot')}
+        self.tag = None
 
-    tree = ElementTree.parse(file)
-    root = tree.find('.//p:infNFe', NS)
+    def handle_starttag(self, tag, attrs):
+        self.tag = tag
+        if tag in self.track:
+            self.track[tag] = True
 
-    e = root.find('p:ide', NS)
-    txt_number = e.find('p:nNF', NS).text
-    try:
-        txt_date = e.find('p:dhEmi', NS).text[0:10]
-    except AttributeError:
-        txt_date = e.find('p:dEmi', NS).text
+    def handle_endtag(self, tag):
+        self.tag = None
+        if tag in self.track:
+            self.track[tag] = False
 
-    e = root.find('p:dest', NS)
-    txt_customer = e.find('p:xNome', NS).text
+    def handle_data(self, data):
+        tag = self.tag
+        is_prev = self.is_prev
 
-    e = root.find('p:det/p:prod', NS)
-    txt_operation = e.find('p:CFOP', NS).text
+        if is_prev('infnfe'):
+            if is_prev('ide'):
+                if tag == 'nnf':
+                    self.result['number'] = data
+                elif tag == 'dhemi':
+                    self.result['date'] = data[0:10]
+                elif tag == 'demi':
+                    self.result['date'] = data
+                self.free('ide', if_has=('number', 'date'))
+            elif is_prev('dest'):
+                if tag == 'xnome':
+                    self.result['customer'] = data
+                    self.free('dest')
+            elif is_prev('det', 'prod'):
+                if tag == 'cfop':
+                    self.result['operation'] = data
+                    self.free('det', 'prod')
+            elif is_prev('total', 'icmstot'):
+                if tag == 'vnf':
+                    self.result['total'] = data
+                elif tag == 'vicms':
+                    self.result['tax'] = data
+                self.free('total', 'icmstot', if_has=('total', 'tax'))
 
-    e = root.find('p:total/p:ICMSTot', NS)
-    txt_total = e.find('p:vNF', NS).text
-    txt_tax = e.find('p:vICMS', NS).text
+    def is_prev(self, *tags):
+        for tag in tags:
+            if tag == self.tag or not self.track[tag]:
+                return False
+        return True
 
-    return ParsedInvoice(
-        number=int(txt_number),
-        date=datetime.date.fromisoformat(txt_date),
-        customer=txt_customer.upper(),
-        operation=int(txt_operation) / 1000,
-        total=float(txt_total),
-        tax=float(txt_tax),
-    )
+    def free(self, *tags, if_has=()):
+        for k in if_has:
+            if k not in self.result:
+                return
+        for tag in tags:
+            self.track[tag] = False
+
+    def error(self, message):
+        raise Exception(message)
+
+    @classmethod
+    def parse(cls, file) -> ParsedInvoice:
+        """Parse and format the parsing result
+        """
+        content = file.read()
+        if isinstance(content, bytes):
+            content = content.decode()
+
+        parser = cls()
+        parser.feed(content)
+
+        r = parser.result
+
+        return ParsedInvoice(
+            number=int(r['number']),
+            date=datetime.date.fromisoformat(r['date']),
+            customer=r['customer'].upper(),
+            operation=int(r['operation']) / 1000,
+            total=float(r['total']),
+            tax=float(r['tax']),
+        )
 
 
 CODE_NATURE = {
@@ -100,7 +151,7 @@ def import_invoices(year: int, month: int, engine=create_engine(settings.INTEGRA
 
                 # Otherwise, we need to parse the invoice XML.
                 else:
-                    pix = parse_invoice_xml(io.BytesIO(xml))
+                    pix = InvoiceParser.parse(io.BytesIO(xml))
                     assert pix.number == number
                     assert pix.date == date
 
