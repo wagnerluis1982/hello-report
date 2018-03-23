@@ -84,6 +84,8 @@ DATABASES = {
     'default': db_from_url('sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3')),
 }
 
+INTEGRATION_DATABASE = 'sqlite:///' + os.path.join(BASE_DIR, 'db-i.sqlite3')
+
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
