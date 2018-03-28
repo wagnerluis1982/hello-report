@@ -131,20 +131,33 @@ def import_invoices(year: int, month: int, engine=create_engine(settings.INTEGRA
 
     with engine.connect() as conn:
         sql = '''
-            SELECT
-              NUMERO, DATA_EMISSAO, XML, RECIBO_CODSTATUS, CANCELA_CODSTATUS
+            SELECT DISTINCT
+              v.NUMERO, v.DATA_EMISSAO, v.XML, v.RECIBO_CODSTATUS, v.CANCELA_CODSTATUS, i.NUMERO_IMP
             FROM
-              VENDAS_NFE
-            WHERE DOC = 'NF' AND DATA_EMISSAO BETWEEN ? AND ?
-            ORDER BY NUMERO
+              VENDAS_NFE AS v
+            INNER JOIN ITEVENDAS AS i ON v.NUMERO = i.NUMERO
+            WHERE v.DOC = 'NF' AND i.DOC = 'NF' AND v.DATA_EMISSAO BETWEEN ? AND ?
         '''
 
         v_result = conn.execute(sql, [begin_date, end_date])
+        v: Invoice = None
 
         with transaction.atomic():
-            for txt_number, date, xml, status, cancel_status in v_result:
+            for txt_number, date, xml, status, cancel_status, ticket in v_result:
                 # Ensure number as integer
                 number = int(txt_number)
+
+                # An ongoing invoice has special treatment
+                if v:
+                    # we check if is a repeated one to process the ticket on sale invoice
+                    if v.number == number:
+                        if v.nature == Invoice.SALE:
+                            v.tickets += ',' + ticket
+                        continue
+                    # or the invoice is saved \o/
+                    else:
+                        v.full_clean()
+                        v.save()
 
                 # Create a not yet complete invoice
                 v = Invoice(number=number, date=date)
@@ -167,15 +180,10 @@ def import_invoices(year: int, month: int, engine=create_engine(settings.INTEGRA
                     v.total = float(pix.total)
                     v.tax = float(pix.tax)
 
-                    # If invoice is a sale, we need an extra database query to get the tickets.
-                    # This is needed to avoid an expensive and not very correct search in XML comments.
+                    # If invoice is a sale, we need to save the ticket
                     if v.nature == Invoice.SALE:
-                        sql = "SELECT DISTINCT NUMERO_IMP FROM ITEVENDAS WHERE DOC = 'NF' AND NUMERO = '%s'"
-                        t_result = conn.execute(sql % txt_number)
-                        tickets_list = t_result.fetchall()
-                        if any(tickets_list):
-                            v.tickets = ','.join([e for (e,) in tickets_list if e])
+                        v.tickets = ticket
 
-                # And the invoice is saved \o/
-                v.full_clean()
-                v.save()
+            # Save last missing invoice
+            v.full_clean()
+            v.save()
