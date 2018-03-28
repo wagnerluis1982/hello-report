@@ -98,22 +98,22 @@ class InvoiceParser(HTMLParser):
         r = parser.result
 
         return ParsedInvoice(
-            number=int(r['number']),
-            date=datetime.date.fromisoformat(r['date']),
-            customer=r['customer'].upper(),
-            operation=int(r['operation']) / 1000,
-            total=float(r['total']),
-            tax=float(r['tax']),
+            number=r['number'],
+            date=r['date'][0:10],
+            customer=r['customer'],
+            operation=r['operation'],
+            total=r['total'],
+            tax=r['tax'],
         )
 
 
 CODE_NATURE = {
-    1.411: Invoice.SALE_RETURN,
-    5.929: Invoice.SALE,
-    6.202: Invoice.PURCHASE_RETURN,
-    6.411: Invoice.PURCHASE_RETURN,
-    6.915: Invoice.RMA,
-    6.949: Invoice.RMA,
+    '1411': Invoice.SALE_RETURN,
+    '5929': Invoice.SALE,
+    '6202': Invoice.PURCHASE_RETURN,
+    '6411': Invoice.PURCHASE_RETURN,
+    '6915': Invoice.RMA,
+    '6949': Invoice.RMA,
 }
 
 
@@ -152,14 +152,14 @@ def import_invoices(year: int, month: int, engine=create_engine(settings.INTEGRA
                 # Otherwise, we need to parse the invoice XML.
                 else:
                     pix = InvoiceParser.parse(io.BytesIO(xml))
-                    assert pix.number == number
-                    assert pix.date == date
+                    assert int(pix.number) == number
+                    assert pix.date == date.isoformat()
 
                     # Fill the invoice with the extra info
                     v.nature = CODE_NATURE[pix.operation]
-                    v.customer = pix.customer
-                    v.total = pix.total
-                    v.tax = pix.tax
+                    v.customer = pix.customer.upper()
+                    v.total = float(pix.total)
+                    v.tax = float(pix.tax)
 
                     # If invoice is a sale, we need an extra database query to get the tickets.
                     # This is needed to avoid an expensive and not very correct search in XML comments.
