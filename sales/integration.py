@@ -108,8 +108,14 @@ class InvoiceParser(HTMLParser):
 
 
 CODE_NATURE = {
+    '1202': Invoice.SALE_RETURN,
     '1411': Invoice.SALE_RETURN,
+    '2202': Invoice.SALE_RETURN,
+    '2411': Invoice.SALE_RETURN,
     '5929': Invoice.SALE,
+    '6929': Invoice.SALE,
+    '5202': Invoice.PURCHASE_RETURN,
+    '5411': Invoice.PURCHASE_RETURN,
     '6202': Invoice.PURCHASE_RETURN,
     '6411': Invoice.PURCHASE_RETURN,
     '6915': Invoice.RMA,
