@@ -1,0 +1,88 @@
+{% load i18n %}
+
+<style type="text/css">
+    table.invoices {
+        border-collapse: collapse;
+    }
+
+    table.invoices th,
+    table.invoices td {
+        border: 1px solid;
+        padding: 0.5ch;
+    }
+
+    td.invoice-number,
+    td.invoice-day,
+    td.invoice-tickets {
+        text-align: center;
+    }
+
+    td.invoice-total,
+    td.invoice-tax {
+        text-align: right;
+    }
+
+    td.invoice-nature-canceled {
+        font-weight: bold;
+    }
+
+    td.invoice-nature-returned {
+        font-weight: bold;
+        text-align: center;
+    }
+</style>
+
+<table class="invoices">
+    <thead>
+    <tr>
+        <th>{% trans "INV" %}</th>
+        <th>{% trans "DAY" %}</th>
+        <th>{% trans "CUSTOMER" %}</th>
+        <th>{% trans "INV TOTAL" %}</th>
+        <th>{% trans "TAX VALUE" %}</th>
+        <th>{% trans "TAX PAID BY TICKETS" %}</th>
+        <th>{% trans "COMMENT" %}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for v in invoices %}
+        <tr>
+            <td class="invoice-number">
+                {{ v.number }}
+            </td>
+            <td class="invoice-day">
+                {{ v.date | date:"d" }}
+            </td>
+            {% if v.nature == v.CANCELED or v.nature == v.DENIED or v.nature == v.SKIPPED %}
+                <td class="invoice-nature-canceled" colspan="4">
+                    {{ v.get_nature_display | upper }}
+                </td>
+            {% elif v.nature == v.SALE_RETURN %}
+                <td>{{ v.customer }}</td>
+                <td class="invoice-nature-returned" colspan="3">
+                    {{ v.get_nature_display | upper }}
+                </td>
+            {% elif v.nature == v.PURCHASE_RETURN or v.nature == v.RMA %}
+                <td>{{ v.customer }}</td>
+                <td class="invoice-total">
+                    {{ v.total | floatformat:2 }}
+                </td>
+                <td class="invoice-tax">
+                    {{ v.tax | floatformat:2 }}
+                </td>
+                <td class="invoice-nature-returned">
+                    {{ v.get_nature_display | upper }}
+                </td>
+            {% else %}
+                <td>{{ v.customer }}</td>
+                <td></td>
+                <td></td>
+                <td class="invoice-tickets">
+                    {{ v.tickets }}
+                </td>
+            {% endif %}
+            <td>{{ v.comment | default_if_none:"" }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
