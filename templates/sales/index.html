@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n humanize_extra %}
 
 <style type="text/css">
     table.invoices {
@@ -65,10 +65,10 @@
             {% elif v.nature == v.PURCHASE_RETURN or v.nature == v.RMA %}
                 <td>{{ v.customer }}</td>
                 <td class="invoice-total">
-                    {{ v.total | floatformat:2 }}
+                    {{ v.total | numberformat }}
                 </td>
                 <td class="invoice-tax">
-                    {{ v.tax | floatformat:2 }}
+                    {{ v.tax | numberformat }}
                 </td>
                 <td class="invoice-nature-returned">
                     {{ v.get_nature_display | upper }}
