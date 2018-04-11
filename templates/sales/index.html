@@ -78,7 +78,7 @@
                 <td></td>
                 <td></td>
                 <td class="invoice-tickets">
-                    {{ v.tickets }}
+                    {{ v.tickets_list | join:' - ' }}
                 </td>
             {% endif %}
             <td>{{ v.comment | default_if_none:"" }}</td>

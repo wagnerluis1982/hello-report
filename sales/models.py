@@ -35,5 +35,8 @@ class Invoice(models.Model):
         verbose_name = _('invoice')
         verbose_name_plural = _('invoices')
 
+    def tickets_list(self):
+        return self.tickets.split(",")
+
     def __str__(self):
         return "%06d - %s" % (self.number, self.customer or '[%s]' % self.get_nature_display().upper())
