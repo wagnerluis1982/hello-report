@@ -30,17 +30,26 @@
         font-weight: bold;
         text-align: center;
     }
+
+    th.invoice-number,
+    td.invoice-customer,
+    td.invoice-total,
+    td.invoice-tax,
+    td.invoice-tickets,
+    td.invoice-nature-returned {
+        white-space: nowrap;
+    }
 </style>
 
 <table class="invoices">
     <thead>
     <tr>
-        <th>{% trans "INV" %}</th>
-        <th>{% trans "DAY" %}</th>
-        <th>{% trans "CUSTOMER" %}</th>
-        <th>{% trans "INV TOTAL" %}</th>
-        <th>{% trans "TAX VALUE" %}</th>
-        <th>{% trans "TAX PAID BY TICKETS" %}</th>
+        <th class="invoice-number">{% trans "INV" %}</th>
+        <th class="invoice-day">{% trans "DAY" %}</th>
+        <th class="invoice-customer">{% trans "CUSTOMER" %}</th>
+        <th class="invoice-total">{% trans "INV TOTAL" %}</th>
+        <th class="invoice-tax">{% trans "TAX VALUE" %}</th>
+        <th class="invoice-tickets">{% trans "TAX PAID BY TICKETS" %}</th>
         <th>{% trans "COMMENT" %}</th>
     </tr>
     </thead>
@@ -58,12 +67,12 @@
                     {{ v.get_nature_display | upper }}
                 </td>
             {% elif v.nature == v.SALE_RETURN %}
-                <td>{{ v.customer }}</td>
+                <td class="invoice-customer">{{ v.customer }}</td>
                 <td class="invoice-nature-returned" colspan="3">
                     {{ v.get_nature_display | upper }}
                 </td>
             {% elif v.nature == v.PURCHASE_RETURN or v.nature == v.RMA %}
-                <td>{{ v.customer }}</td>
+                <td class="invoice-customer">{{ v.customer }}</td>
                 <td class="invoice-total">
                     {{ v.total | numberformat }}
                 </td>
@@ -74,7 +83,7 @@
                     {{ v.get_nature_display | upper }}
                 </td>
             {% else %}
-                <td>{{ v.customer }}</td>
+                <td class="invoice-customer">{{ v.customer }}</td>
                 <td></td>
                 <td></td>
                 <td class="invoice-tickets">
